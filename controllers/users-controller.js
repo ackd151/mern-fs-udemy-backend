@@ -1,61 +1,71 @@
 const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
-const HttpError = require("../models/http-error");
-const DUMMY_USERS = [
-  {
-    id: "u1",
-    name: "John Doe",
-    email: "jDoe@gmail.com",
-    password: 123456,
-  },
-  {
-    id: "u2",
-    name: "Test",
-    email: "test@test.com",
-    password: 123456,
-  },
-];
 
-const getUsers = (req, res, next) => {
-  res.status(200).json({ users: DUMMY_USERS });
+const User = require("../models/user");
+const HttpError = require("../models/http-error");
+
+const getUsers = async (req, res, next) => {
+  let users;
+  try {
+    users = await User.find({}, "-password").populate("places");
+  } catch (err) {
+    return next(new HttpError("Something went wrong in db get users", 500));
+  }
+  res
+    .status(200)
+    .json({ users: users.map((user) => user.toObject({ getters: true })) });
 };
 
-const signup = (req, res, next) => {
+const signup = async (req, res, next) => {
+  // Check req.body valid
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid credentials submitted.", 422);
+    return next(new HttpError("Invalid credentials submitted.", 422));
   }
 
   const { username, email, password } = req.body;
+  const image =
+    "https://www.wolfhooker.com/wp-content/uploads/2019/02/176-1763433_user-account-profile-avatar-person-male-icon-icon-user-account.png.jpeg";
 
-  const emailExists = DUMMY_USERS.find((user) => user.email === email);
-  if (emailExists) {
-    throw new HttpError(
-      "An account with the provided email already exists",
-      422
-    );
+  // Look for existing email in db
+  try {
+    const existingUser = await User.findOne({ email: email });
+    if (existingUser) {
+      return next(
+        new HttpError("A user with the provided email already exists", 422)
+      );
+    }
+  } catch (err) {
+    return next(new HttpError("Something went wrong in db email lookup", 500));
   }
 
-  const createdUser = {
-    id: uuid(),
-    name: username,
-    email,
-    password,
-  };
+  // Create new user
+  let newUser;
+  try {
+    newUser = new User({ name: username, email, password, image });
+    await newUser.save();
+  } catch (err) {
+    return next(new HttpError("Something went wrong in db user creation", 500));
+  }
 
-  DUMMY_USERS.push(createdUser);
-
-  res.status(201).json({ user: createdUser });
+  res.status(201).json({ user: newUser.toObject({ getters: true }) });
 };
 
-const login = (req, res, next) => {
+const login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  const foundUser = DUMMY_USERS.find((user) => user.email === email);
+  let foundUser;
+  try {
+    foundUser = await User.findOne({ email: email });
+  } catch (err) {
+    return next("Something went wrong in db user lookup.", 500);
+  }
 
-  if (!foundUser || foundUser.password !== password) {
-    throw new HttpError("Counld not identidy user, check credentials.", 401);
+  if (!foundUser || foundUser.password !== password.toString()) {
+    return next(
+      new HttpError("Counld not identidy user, check credentials.", 401)
+    );
   }
 
   res.status(200).json({ message: "Logged in!" });

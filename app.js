@@ -1,5 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+require("dotenv").config();
+const mongoose = require("mongoose");
 
 const HttpError = require("./models/http-error");
 // Initialize routes
@@ -26,6 +28,22 @@ app.use((error, req, res, next) => {
   }
   res.status(error.code || 500);
   res.json({ message: error.message || "An unknown error occured!" });
+});
+
+// Connect DB
+mongoose.connect(
+  `mongodb+srv://admin:${process.env.ATLAS_PASSWORD}@cluster0.svzuz.mongodb.net/mernFsUdemy,?retryWrites=true&w=majority`,
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useCreateIndex: true,
+    useFindAndModify: false,
+  }
+);
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error: "));
+db.once("open", () => {
+  console.log("MongoDB connected");
 });
 
 // Start server
