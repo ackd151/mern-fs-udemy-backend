@@ -1,4 +1,3 @@
-const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
 
 const User = require("../models/user");
@@ -24,7 +23,7 @@ const signup = async (req, res, next) => {
     return next(new HttpError("Invalid credentials submitted.", 422));
   }
 
-  const { username, email, password } = req.body;
+  const { name, email, password } = req.body;
   const image =
     "https://www.wolfhooker.com/wp-content/uploads/2019/02/176-1763433_user-account-profile-avatar-person-male-icon-icon-user-account.png.jpeg";
 
@@ -43,7 +42,7 @@ const signup = async (req, res, next) => {
   // Create new user
   let newUser;
   try {
-    newUser = new User({ name: username, email, password, image });
+    newUser = new User({ name, email, password, image });
     await newUser.save();
   } catch (err) {
     return next(new HttpError("Something went wrong in db user creation", 500));
@@ -68,7 +67,10 @@ const login = async (req, res, next) => {
     );
   }
 
-  res.status(200).json({ message: "Logged in!" });
+  res.status(200).json({
+    message: "Logged in!",
+    user: foundUser.toObject({ getters: true }),
+  });
 };
 
 module.exports = { getUsers, signup, login };
