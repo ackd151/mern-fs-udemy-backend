@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 const { validationResult } = require("express-validator");
 const mongoose = require("mongoose");
 
@@ -69,8 +71,7 @@ const createPlace = async (req, res, next) => {
     address,
     description,
     location,
-    image:
-      "https://digbza2f4g9qo.cloudfront.net/-/media/IndyCar/News/Standard/2018/09/09-04-Scenic-Shot-COTA.jpg?h=564&la=en&w=940&vs=1&d=20180904T210230Z",
+    image: req.file.path,
     creator,
   });
 
@@ -159,6 +160,8 @@ const removePlace = async (req, res, next) => {
     );
   }
 
+  const imagePath = place.image;
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -171,6 +174,12 @@ const removePlace = async (req, res, next) => {
       new HttpError("Something went wrong in db remove session.", 500)
     );
   }
+
+  // Remove static image file
+  fs.unlink(imagePath, (err) => {
+    console.log(err);
+  });
+
   res.status(200).json({ message: "Place deleted." });
 };
 

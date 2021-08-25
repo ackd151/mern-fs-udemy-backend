@@ -24,8 +24,7 @@ const signup = async (req, res, next) => {
   }
 
   const { name, email, password } = req.body;
-  const image =
-    "https://www.wolfhooker.com/wp-content/uploads/2019/02/176-1763433_user-account-profile-avatar-person-male-icon-icon-user-account.png.jpeg";
+  const image = req.file.path;
 
   // Look for existing email in db
   try {
@@ -42,7 +41,7 @@ const signup = async (req, res, next) => {
   // Create new user
   let newUser;
   try {
-    newUser = new User({ name, email, password, image });
+    newUser = new User({ name, email, password, image, places: [] });
     await newUser.save();
   } catch (err) {
     return next(new HttpError("Something went wrong in db user creation", 500));
