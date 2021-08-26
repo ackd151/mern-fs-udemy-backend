@@ -126,28 +126,42 @@ const updatePlace = async (req, res, next) => {
   const { placeId } = req.params;
   const { title, description } = req.body;
 
-  let foundPlace;
+  let place;
   try {
-    foundPlace = await Place.findByIdAndUpdate(
-      placeId,
-      { title, description },
-      { new: true }
-    );
+    place = await Place.findById(placeId);
   } catch (err) {
-    return next(new HttpError("Something went wrong in db update.", 500));
+    const error = new HttpError(
+      "Something went wrong, could not update place.",
+      500
+    );
+    return next(error);
   }
 
-  if (!foundPlace) {
-    return next(new HttpError("Place not found for the provided ID", 404));
+  if (place.creator.toString() !== req.userData.userId) {
+    const error = new HttpError("You are not allowed to edit this place.", 401);
+    return next(error);
   }
 
-  res.status(200).json({ place: foundPlace.toObject({ getters: true }) });
+  place.title = title;
+  place.description = description;
+
+  try {
+    await place.save();
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not update place.",
+      500
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ place: place.toObject({ getters: true }) });
 };
 
 const removePlace = async (req, res, next) => {
   const { placeId } = req.params;
 
-  let place, user;
+  let place;
   try {
     place = await Place.findById(placeId).populate("creator");
   } catch (err) {
@@ -156,8 +170,16 @@ const removePlace = async (req, res, next) => {
 
   if (!place) {
     return next(
-      new HttpError("Something went wrong in db remove find place.", 500)
+      new HttpError("Something went wrong in db remove find place.", 404)
     );
+  }
+
+  if (place.creator.id !== req.userData.userId) {
+    const error = new HttpError(
+      "You are not allowed to delete this place.",
+      401
+    );
+    return next(error);
   }
 
   const imagePath = place.image;
