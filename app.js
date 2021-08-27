@@ -54,7 +54,7 @@ app.use((error, req, res, next) => {
 
 // Connect DB
 mongoose.connect(
-  `mongodb+srv://admin:${process.env.ATLAS_PASSWORD}@cluster0.svzuz.mongodb.net/mernFsUdemy,?retryWrites=true&w=majority`,
+  `mongodb+srv://${process.env.ATLAS_USER}:${process.env.ATLAS_PASSWORD}@cluster0.svzuz.mongodb.net/${process.env.ATLAS_DB_NAME},?retryWrites=true&w=majority`,
   {
     useNewUrlParser: true,
     useUnifiedTopology: true,
